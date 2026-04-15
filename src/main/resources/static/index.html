@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Clear+Sans:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+            background-color: #121213;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            letter-spacing: 0.2em;
+        }
+
+        .board {
+            display: grid;
+            grid-template-rows: repeat(6, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+        }
+
+        .tile {
+            width: 100%;
+            aspect-ratio: 1;
+            border: 2px solid #3a3a3c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background-color: #121213;
+            color: white;
+            transition: transform 0.6s;
+        }
+
+        .tile.filled {
+            border-color: #565758;
+        }
+
+        .tile.correct {
+            background-color: #538d4e;
+            border-color: #538d4e;
+        }
+
+        .tile.present {
+            background-color: #b59f3b;
+            border-color: #b59f3b;
+        }
+
+        .tile.absent {
+            background-color: #3a3a3c;
+            border-color: #3a3a3c;
+        }
+
+        .tile.flip {
+            animation: flip 0.6s ease-in-out;
+        }
+
+        @keyframes flip {
+            0% { transform: rotateX(0deg); }
+            50% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0deg); }
+        }
+
+        .keyboard {
+            display: grid;
+            grid-template-rows: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .key {
+            padding: 12px 8px;
+            border-radius: 4px;
+            background-color: #818384;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            min-width: 43px;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+
+        .key:hover {
+            background-color: #565758;
+        }
+
+        .key.correct {
+            background-color: #538d4e;
+        }
+
+        .key.present {
+            background-color: #b59f3b;
+        }
+
+        .key.absent {
+            background-color: #3a3a3c;
+        }
+
+        .key.large {
+            padding: 12px 16px;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #3a3a3c;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: #121213;
+            padding: 40px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 300px;
+            width: 90%;
+        }
+
+        .modal h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .modal p {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .modal button {
+            background-color: #538d4e;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .bounce {
+            animation: bounce 1s ease-in-out;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        @media (max-width: 600px) {
+            .tile {
+                font-size: 24px;
+            }
+            .key {
+                padding: 10px 6px;
+                font-size: 12px;
+                min-width: 35px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">WORDLE</h1>
+        <div class="board" id="board"></div>
+        <div class="keyboard" id="keyboard"></div>
+    </div>
+    <div class="toast" id="toast"></div>
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h2 id="modal-title"></h2>
+            <p id="modal-message"></p>
+            <button id="play-again">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        let gameId = null;
+        let currentGuess = '';
+        let currentRow = 0;
+        let board = [];
+        let keyboard = {};
+
+        const boardElement = document.getElementById('board');
+        const keyboardElement = document.getElementById('keyboard');
+        const toastElement = document.getElementById('toast');
+        const modalElement = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const playAgainButton = document.getElementById('play-again');
+
+        // Initialize board
+        for (let i = 0; i < 6; i++) {
+            const row = [];
+            for (let j = 0; j < 5; j++) {
+                row.push('');
+            }
+            board.push(row);
+        }
+
+        // Initialize keyboard
+        const keyboardLayout = [
+            'QWERTYUIOP',
+            'ASDFGHJKL',
+            'ZXCVBNM'
+        ];
+
+        function renderBoard() {
+            boardElement.innerHTML = '';
+            board.forEach((row, rowIndex) => {
+                const rowElement = document.createElement('div');
+                rowElement.className = 'row';
+                row.forEach((tile, colIndex) => {
+                    const tileElement = document.createElement('div');
+                    tileElement.className = 'tile';
+                    if (rowIndex < currentRow) {
+                        tileElement.classList.add('filled');
+                    }
+                    tileElement.textContent = tile;
+                    rowElement.appendChild(tileElement);
+                });
+                boardElement.appendChild(rowElement);
+            });
+        }
+
+        function renderKeyboard() {
+            keyboardElement.innerHTML = '';
+            keyboardLayout.forEach(row => {
+                const rowElement = document.createElement('div');
+                rowElement.className = 'keyboard-row';
+                row.split('').forEach(letter => {
+                    const keyElement = document.createElement('div');
+                    keyElement.className = 'key';
+                    keyElement.textContent = letter;
+                    keyElement.dataset.letter = letter;
+                    if (keyboard[letter]) {
+                        keyElement.classList.add(keyboard[letter].toLowerCase());
+                    }
+                    keyElement.addEventListener('click', () => handleKeyPress(letter));
+                    rowElement.appendChild(keyElement);
+                });
+                keyboardElement.appendChild(rowElement);
+            });
+
+            // Add enter and backspace
+            const enterRow = document.createElement('div');
+            enterRow.className = 'keyboard-row';
+            const enterKey = document.createElement('div');
+            enterKey.className = 'key large';
+            enterKey.textContent = 'ENTER';
+            enterKey.addEventListener('click', () => handleKeyPress('ENTER'));
+            enterRow.appendChild(enterKey);
+
+            const backspaceKey = document.createElement('div');
+            backspaceKey.className = 'key large';
+            backspaceKey.textContent = '⌫';
+            backspaceKey.addEventListener('click', () => handleKeyPress('BACKSPACE'));
+            enterRow.appendChild(backspaceKey);
+
+            keyboardElement.appendChild(enterRow);
+        }
+
+        function handleKeyPress(key) {
+            if (key === 'ENTER') {
+                submitGuess();
+            } else if (key === 'BACKSPACE') {
+                currentGuess = currentGuess.slice(0, -1);
+                updateBoard();
+            } else if (currentGuess.length < 5 && /^[A-Z]$/.test(key)) {
+                currentGuess += key;
+                updateBoard();
+            }
+        }
+
+        function updateBoard() {
+            board[currentRow] = currentGuess.split('').concat(Array(5 - currentGuess.length).fill(''));
+            renderBoard();
+        }
+
+        async function submitGuess() {
+            if (currentGuess.length !== 5) {
+                showToast('Not enough letters');
+                shakeBoard();
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/guess', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gameId, guess: currentGuess })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    showToast(data.error === 'Invalid word' ? 'Not in word list' : data.error);
+                    shakeBoard();
+                    return;
+                }
+
+                // Update board with results
+                animateTiles(data.results);
+
+                // Update keyboard
+                Object.assign(keyboard, data.keyboard);
+                renderKeyboard();
+
+                currentRow++;
+                currentGuess = '';
+
+                if (data.won) {
+                    showModal('Congratulations!', 'You won!', true);
+                    bounceBoard();
+                } else if (data.lost) {
+                    showModal('Game Over', `The word was ${data.targetWord}`, false);
+                }
+
+            } catch (error) {
+                showToast('Error submitting guess');
+            }
+        }
+
+        function animateTiles(results) {
+            const tiles = boardElement.querySelectorAll('.row')[currentRow].querySelectorAll('.tile');
+            tiles.forEach((tile, index) => {
+                setTimeout(() => {
+                    tile.classList.add('flip');
+                    setTimeout(() => {
+                        tile.classList.add(results[index].toLowerCase());
+                    }, 300);
+                }, index * 100);
+            });
+        }
+
+        function shakeBoard() {
+            boardElement.classList.add('shake');
+            setTimeout(() => boardElement.classList.remove('shake'), 500);
+        }
+
+        function bounceBoard() {
+            boardElement.classList.add('bounce');
+        }
+
+        function showToast(message) {
+            toastElement.textContent = message;
+            toastElement.classList.add('show');
+            setTimeout(() => toastElement.classList.remove('show'), 2000);
+        }
+
+        function showModal(title, message, won) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalElement.classList.add('show');
+        }
+
+        playAgainButton.addEventListener('click', () => {
+            modalElement.classList.remove('show');
+            startNewGame();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                handleKeyPress('ENTER');
+            } else if (e.key === 'Backspace') {
+                handleKeyPress('BACKSPACE');
+            } else if (/^[a-zA-Z]$/.test(e.key)) {
+                handleKeyPress(e.key.toUpperCase());
+            }
+        });
+
+        async function startNewGame() {
+            try {
+                const response = await fetch('/api/new-game');
+                const data = await response.json();
+                gameId = data.gameId;
+                board = data.board.map(row => row.map(cell => cell === 'EMPTY' ? '' : cell));
+                currentRow = 0;
+                currentGuess = '';
+                keyboard = {};
+                renderBoard();
+                renderKeyboard();
+            } catch (error) {
+                showToast('Error starting new game');
+            }
+        }
+
+        // Start the game
+        startNewGame();
+    </script>
+</body>
+</html>
